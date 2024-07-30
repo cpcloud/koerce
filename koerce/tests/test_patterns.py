@@ -1,4 +1,6 @@
+from __future__ import annotations
 import pytest
+
 import sys
 from koerce.patterns import (
     NoMatch,
@@ -13,6 +15,7 @@ from koerce.patterns import (
     Replace,
     GenericInstanceOf2,
     GenericInstanceOfN,
+    SomeChunksOf,
     Option,
     ObjectOf,
     MappingOf,
@@ -45,7 +48,6 @@ from typing import (
     Generic,
     Any,
     Literal,
-    Callable,
     Sequence,
     Optional,
     Union,
@@ -730,12 +732,12 @@ def test_matching():
     assert Capture("pi", InstanceOf(float)) == "pi" @ InstanceOf(float)
     assert Capture("pi", InstanceOf(float)) == "pi" @ InstanceOf(float)
 
-    assert match(Capture("pi", InstanceOf(float)), 3.14, ctx := {}) == 3.14  # noqa: RUF018
+    assert match(Capture("pi", InstanceOf(float)), 3.14, ctx := {}) == 3.14
     assert ctx == {"pi": 3.14}
-    assert match("pi" @ InstanceOf(float), 3.14, ctx := {}) == 3.14  # noqa: RUF018
+    assert match("pi" @ InstanceOf(float), 3.14, ctx := {}) == 3.14
     assert ctx == {"pi": 3.14}
 
-    assert match("pi" @ InstanceOf(float), 3.14, ctx := {}) == 3.14  # noqa: RUF018
+    assert match("pi" @ InstanceOf(float), 3.14, ctx := {}) == 3.14
     assert ctx == {"pi": 3.14}
 
     assert match(InstanceOf(int) | InstanceOf(float), 3) == 3
@@ -844,13 +846,13 @@ def test_matching_sequence_with_captures():
 
     v = list(range(1, 9))
     assert match([1, 2, 3, 4, SomeOf(...)], v) == v
-    assert match([1, 2, 3, 4, "rest" @ SomeOf(...)], v, ctx := {}) == v  # noqa: RUF018
+    assert match([1, 2, 3, 4, "rest" @ SomeOf(...)], v, ctx := {}) == v
     assert ctx == {"rest": [5, 6, 7, 8]}
 
     v = list(range(5))
-    assert match([0, 1, x @ SomeOf(...), 4], v, ctx := {}) == v  # noqa: RUF018
+    assert match([0, 1, x @ SomeOf(...), 4], v, ctx := {}) == v
     assert ctx == {"x": [2, 3]}
-    assert match([0, 1, "var" @ SomeOf(...), 4], v, ctx := {}) == v  # noqa: RUF018
+    assert match([0, 1, "var" @ SomeOf(...), 4], v, ctx := {}) == v
     assert ctx == {"var": [2, 3]}
 
     p = [
@@ -861,7 +863,7 @@ def test_matching_sequence_with_captures():
         6,
     ]
     v = [0, 1, 2, 3, 4.0, 5.0, 6]
-    assert match(p, v, ctx := {}) == v  # noqa: RUF018
+    assert match(p, v, ctx := {}) == v
     assert ctx == {"ints": [2, 3], "last_float": 5.0}
 
 
@@ -877,7 +879,7 @@ def test_matching_sequence_remaining():
     # assert match([1, 2, 3, SomeOf(InstanceOf(int) & Between(0, 10))], five) == five
     # assert match([1, 2, 3, SomeOf(InstanceOf(int) & Between(0, 4))], five) is NoMatch
     assert match([1, 2, 3, SomeOf(int, at_least=2)], four) is NoMatch
-    assert match([1, 2, 3, "res" @ SomeOf(int, at_least=2)], five, ctx := {}) == five  # noqa: RUF018
+    assert match([1, 2, 3, "res" @ SomeOf(int, at_least=2)], five, ctx := {}) == five
     assert ctx == {"res": [4, 5]}
 
 
@@ -894,19 +896,17 @@ def test_matching_sequence_complicated():
         "a": [2, 3],
         "b": [5, 6, 7],
     }
-    assert match(pat, range(1, 10), ctx := {}) == list(range(1, 10))  # noqa: RUF018
+    assert match(pat, range(1, 10), ctx := {}) == list(range(1, 10))
     assert ctx == expected
 
     pat = [1, 2, Capture("remaining", SomeOf(...))]
     expected = {"remaining": [3, 4, 5, 6, 7, 8, 9]}
-    assert match(pat, range(1, 10), ctx := {}) == list(range(1, 10))  # noqa: RUF018
+    assert match(pat, range(1, 10), ctx := {}) == list(range(1, 10))
     assert ctx == expected
 
     v = [0, [1, 2, "3"], [1, 2, "4"], 3]
     assert match([0, SomeOf([1, 2, str]), 3], v) == v
 
-
-from koerce.patterns import SomeChunksOf
 
 
 def test_pattern_sequence_with_nested_some_of():
