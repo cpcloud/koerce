@@ -1,58 +1,60 @@
 from __future__ import annotations
-import pytest
 
 import sys
-from koerce.patterns import (
-    NoMatch,
-    Anything,
-    Nothing,
-    IdenticalTo,
-    EqualTo,
-    InstanceOf,
-    LazyInstanceOf,
-    GenericInstanceOf,
-    GenericInstanceOf1,
-    Replace,
-    GenericInstanceOf2,
-    GenericInstanceOfN,
-    SomeChunksOf,
-    Option,
-    ObjectOf,
-    MappingOf,
-    NoneOf,
-    ObjectOfX,
-    Pattern,
-    SomeOf,
-    ListOf,
-    PatternList,
-    Not,
-    SequenceOf,
-    AnyOf,
-    If,
-    AllOf,
-    TypeOf,
-    IsIn,
-    AsType,
-    GenericCoercedTo,
-    pattern,
-    CoercedTo,
-    TupleOf,
-    DictOf,
-    CoercionError,
-    Capture,
-)
-from koerce.builders import Variable, Call, Deferred
 from dataclasses import dataclass
 from typing import (
-    TypeVar,
-    Generic,
-    Any,
-    Literal,
-    Sequence,
-    Optional,
-    Union,
-    List,
     Annotated,
+    Any,
+    Generic,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    TypeVar,
+    Union,
+)
+
+import pytest
+
+from koerce.builders import Call, Deferred, Variable
+from koerce.patterns import (
+    AllOf,
+    AnyOf,
+    Anything,
+    AsType,
+    Capture,
+    CoercedTo,
+    CoercionError,
+    DictOf,
+    EqualTo,
+    GenericCoercedTo,
+    GenericInstanceOf,
+    GenericInstanceOf1,
+    GenericInstanceOf2,
+    GenericInstanceOfN,
+    IdenticalTo,
+    If,
+    InstanceOf,
+    IsIn,
+    LazyInstanceOf,
+    ListOf,
+    MappingOf,
+    NoMatch,
+    NoneOf,
+    Not,
+    Nothing,
+    ObjectOf,
+    ObjectOfX,
+    Option,
+    Pattern,
+    PatternList,
+    Replace,
+    SequenceOf,
+    SomeChunksOf,
+    SomeOf,
+    TupleOf,
+    TypeOf,
+    pattern,
 )
 from koerce.sugar import match
 
@@ -346,10 +348,6 @@ def test_generic_coerced_to():
         @property
         def dtype(self) -> T:
             return self._dtype
-
-        @property
-        def shape(self) -> DataShape:
-            return Scalar()
 
         def __eq__(self, other):
             return (

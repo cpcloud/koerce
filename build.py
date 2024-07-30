@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import multiprocessing
 import os
 import shutil
 from pathlib import Path
@@ -8,7 +7,7 @@ from pathlib import Path
 import Cython.Compiler.Options
 from Cython.Build import cythonize
 from Cython.Distutils import build_ext
-from setuptools import Distribution, Extension
+from setuptools import Distribution
 
 Cython.Compiler.Options.cimport_from_pyx = True
 
@@ -16,7 +15,6 @@ SOURCE_DIR = Path("koerce")
 BUILD_DIR = Path("cython_build")
 
 
-# extension_modules = get_extension_modules()
 cythonized_modules = cythonize(
     [
         "koerce/patterns.py",
