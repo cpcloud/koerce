@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Dict, Generic, List, Optional, TypeVar
 
-
-
 import pytest
 
 from koerce.utils import get_type_boundvars, get_type_hints, get_type_params
