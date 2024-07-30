@@ -814,6 +814,11 @@ class AllOf(Pattern):
         return value
 
 
+def NoneOf(*args) -> Pattern:
+    """Match none of the passed patterns."""
+    return Not(AnyOf(*args))
+
+
 @cython.final
 @cython.cclass
 class Option(Pattern):

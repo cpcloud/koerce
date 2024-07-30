@@ -16,6 +16,7 @@ from koerce.patterns import (
     Option,
     ObjectOf,
     MappingOf,
+    NoneOf,
     ObjectOfX,
     Pattern,
     SomeOf,
@@ -476,15 +477,15 @@ def test_capture():
     assert ctx == {"result": 12}
 
 
-# def test_none_of():
-#     def negative(x):
-#         return x < 0
+def test_none_of():
+    def negative(x):
+        return x < 0
 
-#     p = NoneOf(InstanceOf(int), Check(negative))
-#     assert p.apply(1.0, context={}) == 1.0
-#     assert p.apply(-1.0, context={}) is NoMatch
-#     assert p.apply(1, context={}) is NoMatch
-#     assert p.describe() == "anything except an int or a value that satisfies negative()"
+    p = NoneOf(InstanceOf(int), If(negative))
+    assert p.apply(1.0, context={}) == 1.0
+    assert p.apply(-1.0, context={}) is NoMatch
+    assert p.apply(1, context={}) is NoMatch
+    #assert p.describe() == "anything except an int or a value that satisfies negative()"
 
 
 def test_generic_sequence_of():
