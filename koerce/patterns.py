@@ -15,13 +15,12 @@ from typing import (
     Callable,
     Optional,
 )
-from typing_extensions import GenericMeta
+from typing_extensions import GenericMeta, get_original_bases
 from .utils import (
     get_type_origin,
     get_type_boundvars,
     get_type_args,
     get_type_params,
-    get_original_bases,
     RewindableIterator,
 )
 from abc import abstractmethod

@@ -12,6 +12,7 @@ exclude = ["koerce/**/*.py"]
 
 [tool.poetry.dependencies]
 python = ">=3.8"
+typing-extensions = "^4.12.2"
 
 
 [tool.poetry.dev-dependencies]

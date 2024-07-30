@@ -1,8 +1,8 @@
 import sys
 import typing
+import itertools
 from typing import Any, TypeVar, Optional
-from typing_extensions import get_original_bases
-from itertools import tee
+
 
 get_type_args = typing.get_args
 get_type_origin = typing.get_origin
@@ -171,8 +171,8 @@ class RewindableIterator:
         """Rewind the iterator to the last checkpoint."""
         if self._checkpoint is None:
             raise ValueError("No checkpoint to rewind to.")
-        self._iterator, self._checkpoint = tee(self._checkpoint)
+        self._iterator, self._checkpoint = itertools.tee(self._checkpoint)
 
     def checkpoint(self):
         """Create a checkpoint of the current iterator state."""
-        self._iterator, self._checkpoint = tee(self._iterator)
+        self._iterator, self._checkpoint = itertools.tee(self._iterator)
