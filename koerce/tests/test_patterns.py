@@ -1207,7 +1207,7 @@ def test_pattern_function():
     assert pattern(Box[MyNegativeInt]) == GenericInstanceOf(Box[MyNegativeInt])
 
     # sequence typehints are converted to the appropriate sequence checkers
-    assert pattern(List[int]) == ListOf(InstanceOf(int))  # noqa: UP006
+    assert pattern(List[int]) == ListOf(InstanceOf(int))
 
     # spelled out sequences construct a more advanced pattern sequence
     assert pattern([int, str, 1]) == PatternList(

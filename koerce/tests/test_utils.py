@@ -1,9 +1,10 @@
 from __future__ import annotations
+
+from typing import Dict, ForwardRef, Generic, List, Optional, TypeVar, Union
+
 import pytest
 
-from typing import ForwardRef, Generic, Optional, Union, List, Dict, TypeVar
-from koerce.utils import get_type_params, get_type_boundvars, get_type_hints
-
+from koerce.utils import get_type_boundvars, get_type_hints, get_type_params
 
 T = TypeVar("T")
 S = TypeVar("S")
