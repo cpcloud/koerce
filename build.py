@@ -1,12 +1,14 @@
+from __future__ import annotations
+
+import multiprocessing
 import os
 import shutil
-import multiprocessing
 from pathlib import Path
-from setuptools import Distribution, Extension
 
+import Cython.Compiler.Options
 from Cython.Build import cythonize
 from Cython.Distutils import build_ext
-import Cython.Compiler.Options
+from setuptools import Distribution, Extension
 
 Cython.Compiler.Options.cimport_from_pyx = True
 
