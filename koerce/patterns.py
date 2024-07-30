@@ -1,32 +1,31 @@
 from __future__ import annotations
-import cython
+
 import importlib
+from abc import abstractmethod
+from collections.abc import Callable, Mapping, Sequence
 from enum import Enum
 from types import UnionType
 from typing import (
-    Any,
-    TypeVar,
-    ForwardRef,
-    Mapping,
-    Literal,
-    Sequence,
-    Union,
     Annotated,
-    Callable,
+    Any,
+    ForwardRef,
+    Literal,
     Optional,
+    TypeVar,
+    Union,
 )
-from typing_extensions import GenericMeta, get_original_bases
-from .utils import (
-    get_type_origin,
-    get_type_boundvars,
-    get_type_args,
-    get_type_params,
-    RewindableIterator,
-)
-from abc import abstractmethod
 
-# from cython.cimports.builders import Builder, Deferred, builder
-from .builders import Builder, Deferred, builder, Variable
+import cython
+from typing_extensions import GenericMeta, get_original_bases
+
+from .builders import Builder, Deferred, Variable, builder
+from .utils import (
+    RewindableIterator,
+    get_type_args,
+    get_type_boundvars,
+    get_type_origin,
+    get_type_params,
+)
 
 
 class CoercionError(Exception):

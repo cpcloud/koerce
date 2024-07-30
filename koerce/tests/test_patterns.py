@@ -21,14 +21,12 @@ from koerce.patterns import (
     Pattern,
     SomeOf,
     ListOf,
-    ObjectOfN,
     PatternList,
     Not,
     SequenceOf,
     AnyOf,
     If,
     AllOf,
-    DeferredEqualTo,
     TypeOf,
     IsIn,
     AsType,
@@ -67,7 +65,6 @@ class Min(Pattern):
         return f"{self.__class__.__name__}({self.min})"
 
     def apply(self, value, context):
-        print("EEE")
         if value >= self.min:
             return value
         else:

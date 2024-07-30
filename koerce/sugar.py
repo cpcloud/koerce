@@ -1,6 +1,10 @@
-from .patterns import Pattern, pattern, Context
-from typing import Callable, Optional, Any
+from __future__ import annotations
+
 import sys
+from collections.abc import Callable
+from typing import Any, Optional
+
+from .patterns import Context, Pattern, pattern
 
 # if_
 # isa
