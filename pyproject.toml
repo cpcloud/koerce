@@ -116,6 +116,7 @@ ignore = [
     "UP006",   # Use `dict` instead of `Dict` for type annotation
     "UP038",   # non-pep604-isinstance, results in slower code
     "S101",    # ignore "Use of `assert` detected"
+    "TCH003",  # Move standard library import `collections.abc.Callable` into a type-checking block
 ]
 # none of these codes will be automatically fixed by ruff
 unfixable = [
