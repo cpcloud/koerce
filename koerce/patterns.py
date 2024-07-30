@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib
-from abc import abstractmethod
 from collections.abc import Callable, Mapping, Sequence
 from enum import Enum
 from types import UnionType
@@ -1645,6 +1644,8 @@ def pattern(obj: Any, allow_custom: bool = True) -> Pattern:
     obj
         The object to create a pattern from. Can be a pattern, a type, a callable,
         a mapping, an iterable or a value.
+    allow_custom
+        Whether to allow custom functions to be used as patterns.
 
     Examples
     --------
