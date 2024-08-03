@@ -35,6 +35,11 @@ class CoercionError(Exception):
 Context = dict[str, Any]
 
 
+@cython.final
+@cython.cclass
+class NoMatchError(Exception):
+    pass
+
 
 @cython.cclass
 class NoMatch:
@@ -173,7 +178,10 @@ class Pattern:
     def apply(self, value, context=None):
         if context is None:
             context = {}
-        return self.match(value, context)
+        try:
+            return self.match(value, context)
+        except:
+            return NoMatch
 
     @cython.cfunc
     def match(self, value, ctx: Context): ...
@@ -296,7 +304,7 @@ class Nothing(Pattern):
     @cython.cfunc
     @cython.inline
     def match(self, value, ctx: Context):
-        return NoMatch
+        raise NoMatchError()
 
 
 @cython.final
@@ -319,7 +327,7 @@ class IdenticalTo(Pattern):
         if value is self.value:
             return value
         else:
-            return NoMatch
+            raise NoMatchError()
 
 @cython.ccall
 def Eq(value) -> Pattern:
@@ -349,7 +357,7 @@ class EqValue(Pattern):
         if value == self.value:
             return value
         else:
-            return NoMatch
+            raise NoMatchError()
 
 
 @cython.final
@@ -380,7 +388,7 @@ class EqDeferred(Pattern):
         if value == self.value.apply(ctx):
             return value
         else:
-            return NoMatch
+            raise NoMatchError()
 
 
 @cython.final
@@ -403,7 +411,7 @@ class TypeOf(Pattern):
         if type(value) is self.type_:
             return value
         else:
-            return NoMatch
+            raise NoMatchError()
 
 
 @cython.final
@@ -429,7 +437,7 @@ class InstanceOf(Pattern):
         if isinstance(value, self.type_):
             return value
         else:
-            return NoMatch
+            raise NoMatchError()
 
 
 @cython.final
@@ -472,7 +480,10 @@ class LazyInstanceOf(Pattern):
     @cython.cfunc
     def match(self, value, ctx: Context):
         if self.type_ is not None:
-            return value if isinstance(value, self.type_) else NoMatch
+            if isinstance(value, self.type_):
+                return value
+            else:
+                raise NoMatchError()
 
         klass: type
         package: str
@@ -480,9 +491,12 @@ class LazyInstanceOf(Pattern):
             package = klass.__module__.split(".", 1)[0]
             if package == self.package:
                 self._import_type()
-                return value if isinstance(value, self.type_) else NoMatch
+                if isinstance(value, self.type_):
+                    return value
+                else:
+                    raise NoMatchError()
 
-        return NoMatch
+        raise NoMatchError()
 
 
 @cython.ccall
@@ -526,11 +540,10 @@ class GenericInstanceOf1(Pattern):
     @cython.cfunc
     def match(self, value, ctx: Context):
         if not isinstance(value, self.origin):
-            return NoMatch
+            raise NoMatchError()
 
         attr1 = getattr(value, self.name1)
-        if self.pattern1.match(attr1, ctx) is NoMatch:
-            return NoMatch
+        self.pattern1.match(attr1, ctx)
 
         return value
 
@@ -569,15 +582,13 @@ class GenericInstanceOf2(Pattern):
     @cython.cfunc
     def match(self, value, ctx: Context):
         if not isinstance(value, self.origin):
-            return NoMatch
+            raise NoMatchError()
 
         attr1 = getattr(value, self.name1)
-        if self.pattern1.match(attr1, ctx) is NoMatch:
-            return NoMatch
+        self.pattern1.match(attr1, ctx)
 
         attr2 = getattr(value, self.name2)
-        if self.pattern2.match(attr2, ctx) is NoMatch:
-            return NoMatch
+        self.pattern2.match(attr2, ctx)
 
         return value
 
@@ -608,14 +619,13 @@ class GenericInstanceOfN(Pattern):
     @cython.cfunc
     def match(self, value, ctx: Context):
         if not isinstance(value, self.origin):
-            return NoMatch
+            raise NoMatchError()
 
         name: str
         pattern: Pattern
         for name, pattern in self.fields.items():
             attr = getattr(value, name)
-            if pattern.match(attr, ctx) is NoMatch:
-                return NoMatch
+            pattern.match(attr, ctx)
 
         return value
 
@@ -640,7 +650,7 @@ class SubclassOf(Pattern):
         if issubclass(value, self.type_):
             return value
         else:
-            return NoMatch
+            raise NoMatchError()
 
 
 # @cython.ccall
@@ -677,7 +687,7 @@ class AsType(Pattern):
         try:
             return self.type_(value)
         except ValueError:
-            return NoMatch
+            raise NoMatchError()
 
 
 @cython.final
@@ -704,12 +714,12 @@ class CoercedTo(Pattern):
         try:
             value = self.type_.__coerce__(value)
         except CoercionError:
-            return NoMatch
+            raise NoMatchError()
 
         if isinstance(value, self.type_):
             return value
         else:
-            return NoMatch
+            raise NoMatchError()
 
 
 @cython.final
@@ -745,10 +755,9 @@ class GenericCoercedTo(Pattern):
         try:
             value = self.origin.__coerce__(value, **self.params)
         except CoercionError:
-            return NoMatch
+            raise NoMatchError()
 
-        if self.checker.match(value, ctx) is NoMatch:
-            return NoMatch
+        self.checker.match(value, ctx)
 
         return value
 
@@ -769,10 +778,12 @@ class Not(Pattern):
 
     @cython.cfunc
     def match(self, value, ctx: Context):
-        if self.inner.match(value, ctx) is NoMatch:
+        try:
+            self.inner.match(value, ctx)
+        except:
             return value
         else:
-            return NoMatch
+            raise NoMatchError()
 
 
 @cython.final
@@ -793,9 +804,11 @@ class AnyOf(Pattern):
     def match(self, value, ctx: Context):
         inner: Pattern
         for inner in self.inners:
-            if inner.match(value, ctx) is not NoMatch:
-                return value
-        return NoMatch
+            try:
+                return inner.match(value, ctx)
+            except:
+                pass
+        raise NoMatchError()
 
 
 @cython.final
@@ -817,8 +830,6 @@ class AllOf(Pattern):
         inner: Pattern
         for inner in self.inners:
             value = inner.match(value, ctx)
-            if value is NoMatch:
-                return NoMatch
         return value
 
 
@@ -901,7 +912,7 @@ class IfFunction(Pattern):
         if self.predicate(value):
             return value
         else:
-            return NoMatch
+            raise NoMatchError()
 
 
 @cython.final
@@ -935,7 +946,7 @@ class IfDeferred(Pattern):
         if self.builder.apply(ctx):
             return value
         else:
-            return NoMatch
+            raise NoMatchError()
 
 
 @cython.final
@@ -966,7 +977,7 @@ class IsIn(Pattern):
         if value in self.haystack:
             return value
         else:
-            return NoMatch
+            raise NoMatchError()
 
 
 @cython.final
@@ -1011,7 +1022,7 @@ class SequenceOf(Pattern):
     @cython.cfunc
     def match(self, values, ctx: Context):
         if isinstance(values, (str, bytes)):
-            return NoMatch
+            raise NoMatchError()
 
         # optimization to avoid unnecessary iteration
         if isinstance(self.item, Anything):
@@ -1020,14 +1031,11 @@ class SequenceOf(Pattern):
         try:
             it = iter(values)
         except TypeError:
-            return NoMatch
+            raise NoMatchError()
 
         result: list = []
         for item in it:
-            res = self.item.match(item, ctx)
-            if res is NoMatch:
-                return NoMatch
-            result.append(res)
+            result.append(self.item.match(item, ctx))
 
         return self.type_.match(result, ctx)
 
@@ -1084,14 +1092,12 @@ class MappingOf(Pattern):
     @cython.cfunc
     def match(self, value, ctx: Context):
         if not isinstance(value, Mapping):
-            return NoMatch
+            raise NoMatchError()
 
         result = {}
         for k, v in value.items():
-            if (k := self.key.match(k, ctx)) is NoMatch:
-                return NoMatch
-            if (v := self.value.match(v, ctx)) is NoMatch:
-                return NoMatch
+            k = self.key.match(k, ctx)
+            v = self.value.match(v, ctx)
             result[k] = v
 
         return self.type_.match(result, ctx)
@@ -1126,11 +1132,7 @@ class Custom(Pattern):
 
     @cython.cfunc
     def match(self, value, ctx: Context):
-        result = self.func(value, **ctx)
-        if result is NoMatch:
-            return NoMatch
-        else:
-            return result
+        return self.func(value, **ctx)
 
 
 @cython.final
@@ -1169,8 +1171,6 @@ class Capture(Pattern):
     @cython.cfunc
     def match(self, value, ctx: Context):
         value = self.what.match(value, ctx)
-        if value is NoMatch:
-            return NoMatch
         ctx[self.key] = value
         return value
 
@@ -1202,8 +1202,6 @@ class Replace(Pattern):
     @cython.cfunc
     def match(self, value, ctx: Context):
         value = self.searcher.match(value, ctx)
-        if value is NoMatch:
-            return NoMatch
         # use the `_` reserved variable to record the value being replaced
         # in the context, so that it can be used in the replacer pattern
         ctx["_"] = value
@@ -1268,13 +1266,12 @@ class ObjectOf1(Pattern):
     @cython.cfunc
     def match(self, value, ctx: Context):
         if not isinstance(value, self.type_):
-            return NoMatch
+            raise NoMatchError()
 
         attr1 = getattr(value, self.field1)
         result1 = self.pattern1.match(attr1, ctx)
-        if result1 is NoMatch:
-            return NoMatch
-        elif result1 is not attr1:
+
+        if result1 is not attr1:
             changed: dict = {self.field1: result1}
             return _reconstruct(value, changed)
         else:
@@ -1312,17 +1309,13 @@ class ObjectOf2(Pattern):
     @cython.cfunc
     def match(self, value, ctx: Context):
         if not isinstance(value, self.type_):
-            return NoMatch
+            raise NoMatchError()
 
         attr1 = getattr(value, self.field1)
         result1 = self.pattern1.match(attr1, ctx)
-        if result1 is NoMatch:
-            return NoMatch
 
         attr2 = getattr(value, self.field2)
         result2 = self.pattern2.match(attr2, ctx)
-        if result2 is NoMatch:
-            return NoMatch
 
         if result1 is not attr1 or result2 is not attr2:
             changed: dict = {self.field1: result1, self.field2: result2}
@@ -1366,22 +1359,16 @@ class ObjectOf3(Pattern):
     @cython.cfunc
     def match(self, value, ctx: Context):
         if not isinstance(value, self.type_):
-            return NoMatch
+            raise NoMatchError()
 
         attr1 = getattr(value, self.field1)
         result1 = self.pattern1.match(attr1, ctx)
-        if result1 is NoMatch:
-            return NoMatch
 
         attr2 = getattr(value, self.field2)
         result2 = self.pattern2.match(attr2, ctx)
-        if result2 is NoMatch:
-            return NoMatch
 
         attr3 = getattr(value, self.field3)
         result3 = self.pattern3.match(attr3, ctx)
-        if result3 is NoMatch:
-            return NoMatch
 
         if result1 is not attr1 or result2 is not attr2 or result3 is not attr3:
             changed: dict = {self.field1: result1, self.field2: result2, self.field3: result3}
@@ -1426,7 +1413,7 @@ class ObjectOfN(Pattern):
     @cython.cfunc
     def match(self, value, ctx: Context):
         if not isinstance(value, self.type_):
-            return NoMatch
+            raise NoMatchError()
 
         name: str
         pattern: Pattern
@@ -1434,9 +1421,7 @@ class ObjectOfN(Pattern):
         for name, pattern in self.fields.items():
             attr = getattr(value, name)
             result = pattern.match(attr, ctx)
-            if result is NoMatch:
-                return NoMatch
-            elif result is not attr:
+            if result is not attr:
                 changed[name] = result
 
         if changed:
@@ -1469,12 +1454,11 @@ class ObjectOfX(Pattern):
 
     @cython.cfunc
     def match(self, value, ctx: Context):
-        if self.type_.match(value, ctx) is NoMatch:
-            return NoMatch
+        self.type_.match(value, ctx)
 
         # the pattern requirest more positional arguments than the object has
         if len(value.__match_args__) < len(self.args):
-            return NoMatch
+            raise NoMatchError()
 
         patterns: dict[str, Pattern] = dict(zip(value.__match_args__, self.args))
         patterns.update(self.kwargs)
@@ -1486,12 +1470,10 @@ class ObjectOfX(Pattern):
             try:
                 attr = getattr(value, name)
             except AttributeError:
-                return NoMatch
+                raise NoMatchError()
 
             result = pattern.match(attr, ctx)
-            if result is NoMatch:
-                return NoMatch
-            elif result is not attr:
+            if result is not attr:
                 changed[name] = result
 
         if changed:
@@ -1513,7 +1495,7 @@ class CallableWith(Pattern):
     @cython.cfunc
     def match(self, value, ctx: Context):
         if not callable(value):
-            return NoMatch
+            raise NoMatchError()
 
         sig = Signature.from_callable(value)
 
@@ -1534,10 +1516,10 @@ class CallableWith(Pattern):
 
         if len(required_positional) > len(self.args):
             # Callable has more positional arguments than expected")
-            return NoMatch
+            raise NoMatchError()
         elif len(positional) < len(self.args) and not has_varargs:
             # Callable has less positional arguments than expected")
-            return NoMatch
+            raise NoMatchError()
         else:
             return value
 
@@ -1585,9 +1567,9 @@ class WithLength(Pattern):
     def match(self, value, ctx: Context):
         length = len(value)
         if self.at_least is not None and length < self.at_least:
-            return NoMatch
+            raise NoMatchError()
         if self.at_most is not None and length > self.at_most:
-            return NoMatch
+            raise NoMatchError()
         return value
 
 
@@ -1619,9 +1601,6 @@ class SomeItemsOf(Pattern):
     @cython.cfunc
     def match(self, values, ctx: Context):
         result = self.pattern.match(values, ctx)
-        if result is NoMatch:
-            return NoMatch
-
         return self.length.match(result, ctx)
 
 
@@ -1652,7 +1631,9 @@ class SomeChunksOf(Pattern):
     def chunk(self, values, context):
         chunk: list = []
         for item in values:
-            if self.delimiter.match(item, context) is NoMatch:
+            try:
+                self.delimiter.match(item, context)
+            except:
                 chunk.append(item)
             else:
                 if chunk:  # only yield if there are items in the chunk
@@ -1665,13 +1646,7 @@ class SomeChunksOf(Pattern):
     def match(self, values, ctx: Context):
         chunks = self.chunk(values, ctx)
         result = self.pattern.match(chunks, ctx)
-        if result is NoMatch:
-            return NoMatch
-
         result = self.length.match(result, ctx)
-        if result is NoMatch:
-            return NoMatch
-
         return [el for lst in result for el in lst]
 
 
@@ -1727,22 +1702,20 @@ class FixedPatternList(Pattern):
     @cython.cfunc
     def match(self, values, ctx: Context):
         if isinstance(values, (str, bytes)):
-            return NoMatch
+            raise NoMatchError()
 
         try:
             values = list(values)
         except TypeError:
-            return NoMatch
+            raise NoMatchError()
 
         if len(values) != len(self.patterns):
-            return NoMatch
+            raise NoMatchError()
 
         result = []
         pattern: Pattern
         for pattern, value in zip(self.patterns, values):
             value = pattern.match(value, ctx)
-            if value is NoMatch:
-                return NoMatch
             result.append(value)
 
         return self.type_(result)
@@ -1771,7 +1744,10 @@ class VariadicPatternList(Pattern):
     @cython.cfunc
     def match(self, value, ctx: Context):
         if not self.patterns:
-            return NoMatch if value else []
+            if value:
+                raise NoMatchError()
+            else:
+                return self.type_(value)
 
         it = RewindableIterator(value)
 
@@ -1799,29 +1775,24 @@ class VariadicPatternList(Pattern):
                     except StopIteration:
                         break
 
-                    res = following.match(item, ctx)
-                    if res is NoMatch:
+                    try:
+                        res = following.match(item, ctx)
+                    except:
                         matches.append(item)
                     else:
                         it.rewind()
                         break
 
                 res = original.match(matches, ctx)
-                if res is NoMatch:
-                    return NoMatch
-                else:
-                    result.extend(res)
+                result.extend(res)
             else:
                 try:
                     item = next(it)
                 except StopIteration:
-                    return NoMatch
+                    raise NoMatchError()
 
                 res = original.match(item, ctx)
-                if res is NoMatch:
-                    return NoMatch
-                else:
-                    result.append(res)
+                result.append(res)
 
         return self.type_(result)
 
@@ -1854,16 +1825,14 @@ class PatternMap1(Pattern):
     @cython.cfunc
     def match(self, value, ctx: Context):
         if not isinstance(value, Mapping):
-            return NoMatch
+            raise NoMatchError()
 
         try:
             item1 = value[self.field1]
         except KeyError:
-            return NoMatch
+            raise NoMatchError()
         result1 = self.pattern1.match(item1, ctx)
-        if result1 is NoMatch:
-            return NoMatch
-        elif result1 is not item1:
+        if result1 is not item1:
             return type(value)({**value, self.field1: result1})
         else:
             return value
@@ -1895,23 +1864,19 @@ class PatternMap2(Pattern):
     @cython.cfunc
     def match(self, value, ctx: Context):
         if not isinstance(value, Mapping):
-            return NoMatch
+            raise NoMatchError()
 
         try:
             item1 = value[self.field1]
         except KeyError:
-            return NoMatch
+            raise NoMatchError()
         result1 = self.pattern1.match(item1, ctx)
-        if result1 is NoMatch:
-            return NoMatch
 
         try:
             item2 = value[self.field2]
         except KeyError:
-            return NoMatch
+            raise NoMatchError()
         result2 = self.pattern2.match(item2, ctx)
-        if result2 is NoMatch:
-            return NoMatch
 
         if result1 is not item1 or result2 is not item2:
             return type(value)({**value, self.field1: result1, self.field2: result2})
@@ -1937,7 +1902,7 @@ class PatternMapN(Pattern):
     @cython.cfunc
     def match(self, value, ctx: Context):
         if not isinstance(value, Mapping):
-            return NoMatch
+            raise NoMatchError()
 
         name: str
         pattern: Pattern
@@ -1946,11 +1911,9 @@ class PatternMapN(Pattern):
             try:
                 item = value[name]
             except KeyError:
-                return NoMatch
+                raise NoMatchError()
             result = pattern.match(item, ctx)
-            if result is NoMatch:
-                return NoMatch
-            elif result is not item:
+            if result is not item:
                 changed[name] = result
 
         if changed:
